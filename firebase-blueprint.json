@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and location data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "geohash": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "neighborhood"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "A like from one user to another",
+      "type": "object",
+      "properties": {
+        "fromId": { "type": "string" },
+        "toId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A mutual like between two users",
+      "type": "object",
+      "properties": {
+        "users": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message in a chat",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Call": {
+       "title": "Call",
+       "description": "WebRTC signaling document",
+       "type": "object",
+       "properties": {
+         "callerId": { "type": "string" },
+         "receiverId": { "type": "string" },
+         "offer": { "type": "object" },
+         "answer": { "type": "object" },
+         "status": { "type": "string" }
+       }
+    },
+    "Photo": {
+      "title": "Photo",
+      "description": "A private photo uploaded by a user",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PhotoAccess": {
+      "title": "PhotoAccess",
+      "description": "Access permission for private photos",
+      "type": "object",
+      "properties": {
+        "requesterId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user profile data"
+    },
+    "/users/{userId}/photos/{photoId}": {
+      "schema": "Photo",
+      "description": "Private photos of a user"
+    },
+    "/photoAccess/{accessId}": {
+      "schema": "PhotoAccess",
+      "description": "Photo access requests/permissions"
+    },
+    "/likes/{likeId}": {
+      "schema": "Like",
+      "description": "Likes given by users"
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Matched pairs"
+    },
+    "/matches/{matchId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages between matched users"
+    },
+    "/calls/{callId}": {
+      "schema": "Call",
+      "description": "Signaling for video calls"
+    }
+  }
+}

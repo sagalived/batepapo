@@ -1,0 +1,10 @@
+{
+  "name": "Amigo - Conectando Pessoas",
+  "description": "App de relacionamento moderno com chamadas de vídeo, chat em tempo real e geolocalização.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

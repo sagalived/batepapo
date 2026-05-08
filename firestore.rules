@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == request.auth.uid &&
+               data.displayName is string && data.displayName.size() <= 50 &&
+               data.neighborhood is string && data.neighborhood.size() <= 100;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'neighborhood', 'geohash', 'lat', 'lng', 'updatedAt']);
+
+      match /photos/{photoId} {
+        allow read: if isOwner(userId) || (
+          isSignedIn() && 
+          exists(/databases/$(database)/documents/photoAccess/$(request.auth.uid + "_" + userId)) && 
+          get(/databases/$(database)/documents/photoAccess/$(request.auth.uid + "_" + userId)).data.status == "approved"
+        );
+        allow create, delete: if isOwner(userId);
+      }
+    }
+
+    // --- Photo Access Requests ---
+    match /photoAccess/{accessId} {
+      function isValidRequest(data) {
+        return data.requesterId == request.auth.uid &&
+               data.status == "pending";
+      }
+
+      allow read: if isSignedIn() && (resource.data.requesterId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow create: if isSignedIn() && isValidRequest(request.resource.data) && accessId == request.auth.uid + "_" + request.resource.data.ownerId;
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']);
+    }
+
+    // --- Likes ---
+    match /likes/{likeId} {
+      function isValidLike(data) {
+        return data.fromId == request.auth.uid &&
+               isValidId(data.toId);
+      }
+
+      allow read: if isSignedIn() && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
+      allow create: if isSignedIn() && isValidLike(request.resource.data);
+      allow delete: if isSignedIn() && resource.data.fromId == request.auth.uid;
+    }
+
+    // --- Matches ---
+    match /matches/{matchId} {
+      function isUserInMatch() {
+        return isSignedIn() && request.auth.uid in resource.data.users;
+      }
+
+      allow read: if isUserInMatch();
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.users;
+      allow update: if isUserInMatch(); // For updating lastMessage etc
+      
+      match /messages/{messageId} {
+        allow read: if isUserInMatch();
+        allow create: if isUserInMatch() && request.resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // --- Calls ---
+    match /calls/{callId} {
+      allow read: if isSignedIn() && (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.callerId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+    }
+  }
+}
